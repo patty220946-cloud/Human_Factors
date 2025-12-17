@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>แบบสำรวจการใช้งานสวิตช์ไฟ</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #74ebd5, #9face6);
+  padding: 20px;
+}
+.container {
+  max-width: 800px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+.section { display: none; }
+.section.active { display: block; }
+.images {
+  display: flex;
+  justify-content: space-around;
+}
+.images img {
+  width: 45%;
+  border: 1px solid #ccc;
+}
+button {
+  margin: 8px;
+  padding: 10px;
+}
+.center { text-align: center; }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1 class="center">แบบสำรวจการใช้งานสวิตช์ไฟ</h1>
+
+<!-- SECTION 1 -->
+<div id="section1" class="section active">
+  <h2>ข้อมูลผู้เข้าทดสอบ</h2>
+
+  <label>ชื่อเล่น <input id="name"></label>
+  <label>เพศ
+    <select id="gender">
+      <option>ชาย</option>
+      <option>หญิง</option>
+      <option>อื่น ๆ</option>
+    </select>
+  </label>
+  <label>ช่วงอายุ
+    <select id="age">
+      <option>ต่ำกว่า 20</option>
+      <option>20–22</option>
+      <option>23–25</option>
+      <option>มากกว่า 25</option>
+    </select>
+  </label>
+  <label>สถานภาพ
+    <select id="status">
+      <option>นักศึกษา</option>
+      <option>อาจารย์</option>
+      <option>บุคลากร</option>
+    </select>
+  </label>
+  <label>เคยใช้สถานที่นี้หรือไม่
+    <select id="experience">
+      <option>เคย</option>
+      <option>ไม่เคย</option>
+    </select>
+  </label>
+
+  <button onclick="startIntro()">เริ่มทดสอบ</button>
+</div>
+
+<!-- SECTION 2 -->
+<div id="section2" class="section center">
+  <h2>คำแนะนำ</h2>
+  <p>เลือกสวิตช์ให้ตรงกับตำแหน่งไฟ</p>
+  <p>เริ่มใน <span id="countdown">3</span></p>
+</div>
+
+<!-- SECTION 3 -->
+<div id="section3" class="section center">
+  <h2 id="questionText"></h2>
+  <div class="images">
+    <img id="imgA">
+    <img id="imgB">
+  </div>
+  <div>
+    <button onclick="answer(1)">สวิตช์ 1</button>
+    <button onclick="answer(2)">สวิตช์ 2</button>
+    <button onclick="answer(3)">สวิตช์ 3</button>
+    <button onclick="answer(4)">สวิตช์ 4</button>
+  </div>
+</div>
+
+<!-- SECTION 4 -->
+<div id="section4" class="section center">
+  <h2>ผลการทดสอบ</h2>
+  <div id="result"></div>
+</div>
+
+</div>
+
+<script>
+/* ================== CONFIG ================== */
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJ-Np8OpyYbfct6LUZeju3Vt1NhkSykIHLGX--P8gigevep_wBkKhvik7c6Lvjd3jk_w/exec";
+/* ============================================ */
+
+const questions = [
+  { text: "ข้อ 1", img1: "A1.png", img2: "A2.png" },
+  { text: "ข้อ 2", img1: "B1.png", img2: "B2.png" },
+  { text: "ข้อ 3", img1: "C1.png", img2: "C2.png" },
+  { text: "ข้อ 4", img1: "D1.png", img2: "D2.png" }
+];
+
+let current = 0;
+let startTime;
+let times = [];
+
+function startIntro() {
+  section1.classList.remove("active");
+  section2.classList.add("active");
+  let c = 3;
+  const cd = document.getElementById("countdown");
+  const t = setInterval(() => {
+    c--; cd.textContent = c;
+    if (c === 0) {
+      clearInterval(t);
+      section2.classList.remove("active");
+      section3.classList.add("active");
+      loadQuestion();
+    }
+  }, 1000);
+}
+
+function loadQuestion() {
+  const q = questions[current];
+  questionText.textContent = q.text;
+  imgA.src = q.img1;
+  imgB.src = q.img2;
+  startTime = Date.now();
+}
+
+function answer(choice) {
+  const end = Date.now();
+  times.push({
+    question: current + 1,
+    choice: choice,
+    time: ((end - startTime) / 1000).toFixed(2)
+  });
+  current++;
+  current < questions.length ? loadQuestion() : showResult();
+}
+
+function showResult() {
+  section3.classList.remove("active");
+  section4.classList.add("active");
+
+  let html = "";
+  times.forEach(t => {
+    html += `ข้อ ${t.question}: เลือก ${t.choice} ใช้เวลา ${t.time} วินาที<br>`;
+  });
+  result.innerHTML = html;
+
+  sendToSheet();
+}
+
+function sendToSheet() {
+  const payload = {
+    name: name.value,
+    gender: gender.value,
+    age: age.value,
+    status: status.value,
+    experience: experience.value,
+    times: times
+  };
+
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+</script>
+</body>
+</html>
